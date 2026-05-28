@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor Petrobras · Ênfase 18</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--card:#21253a;--border:rgba(255,255,255,.08);
+  --text:#e8eaf0;--muted:#8890a8;--hint:#4a5068;
+  --primary:#6c63ff;--primary-d:#5149d4;--primary-glow:rgba(108,99,255,.15);
+  --green:#10b981;--green-bg:rgba(16,185,129,.1);
+  --yellow:#f59e0b;--yellow-bg:rgba(245,158,11,.1);
+  --red:#ef4444;--red-bg:rgba(239,68,68,.1);
+  --blue:#3b82f6;
+  --r:10px;--r2:14px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+@media(max-width:700px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr}}
+
+/* ── SIDEBAR ── */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+.brand{font-size:15px;font-weight:700;color:var(--text);padding:0 8px 20px;letter-spacing:-.3px}
+.brand span{color:var(--primary)}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);border:none;background:none;color:var(--muted);font-size:13px;font-family:inherit;cursor:pointer;width:100%;text-align:left;transition:.15s}
+.nav-btn svg{flex-shrink:0;opacity:.7}
+.nav-btn:hover{background:var(--card);color:var(--text)}
+.nav-btn.on{background:var(--primary-glow);color:var(--primary);font-weight:600}
+.nav-btn.on svg{opacity:1}
+@media(max-width:700px){
+  .sidebar{flex-direction:row;overflow-x:auto;padding:12px;gap:4px;border-right:none;border-bottom:1px solid var(--border)}
+  .brand{display:none}
+  .nav-btn{flex-direction:column;gap:4px;font-size:10px;padding:8px 10px;white-space:nowrap}
+}
+
+/* ── MAIN ── */
+.main{padding:28px 24px;overflow-y:auto}
+@media(max-width:700px){.main{padding:16px}}
+.view{display:none}.view.on{display:block}
+
+/* ── HEADER ── */
+.page-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap}
+.page-title{font-size:20px;font-weight:700;letter-spacing:-.4px}
+.badge-db{font-size:11px;padding:4px 10px;border-radius:99px;font-weight:600}
+.badge-ok{background:var(--green-bg);color:var(--green)}
+.badge-warn{background:var(--yellow-bg);color:var(--yellow)}
+.badge-bad{background:var(--red-bg);color:var(--red)}
+
+/* ── CONFIG BANNER ── */
+.cfg-banner{background:var(--yellow-bg);border:1px solid rgba(245,158,11,.25);border-radius:var(--r2);padding:14px 16px;margin-bottom:20px;font-size:12px;color:var(--yellow)}
+.cfg-banner strong{display:block;margin-bottom:4px;font-size:13px}
+.cfg-banner a{color:var(--yellow);text-underline-offset:3px}
+
+/* ── METRICS GRID ── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.mc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.mc-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:8px}
+.mc-val{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
+.mc-sub{font-size:11px;color:var(--muted)}
+.mc-accent{font-size:11px;font-weight:600;margin-top:4px}
+
+/* ── PROGRESS ── */
+.prog-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:20px}
+.prog-hd{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px}
+.prog-track{background:var(--surface);border-radius:99px;height:10px;overflow:hidden;position:relative}
+.prog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--primary),#a78bfa);transition:width .5s ease}
+.prog-ideal{position:absolute;top:0;bottom:0;width:2px;background:var(--yellow);opacity:.7}
+
+/* ── CHARTS ── */
+.charts-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:700px){.charts-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.chart-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:12px}
+.chart-wrap{position:relative;width:100%;height:200px}
+
+/* ── HEATMAP ── */
+.heatmap-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:20px;overflow-x:auto}
+.heatmap-grid{display:grid;grid-template-rows:repeat(7,16px);grid-auto-flow:column;gap:3px;width:max-content}
+.hm-cell{width:16px;height:16px;border-radius:3px;background:var(--surface);cursor:default;transition:.1s}
+.hm-cell:hover::after{content:attr(data-tip);position:fixed;background:#1e2235;border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:99;transform:translate(-50%,-110%);left:var(--mx);top:var(--my)}
+.hm-legend{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);margin-top:8px}
+.hm-sq{width:12px;height:12px;border-radius:2px}
+.month-labels{display:flex;gap:3px;width:max-content;margin-bottom:4px;font-size:9px;color:var(--muted)}
+
+/* ── KPI CARDS ── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.kpi-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.kpi-name{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.kpi-icon{font-size:18px}
+.kpi-val{font-size:22px;font-weight:700;margin-bottom:2px}
+.kpi-desc{font-size:11px;color:var(--muted);line-height:1.5}
+
+/* ── REVIEW QUEUE ── */
+.rev-box{background:var(--yellow-bg);border:1px solid rgba(245,158,11,.2);border-radius:var(--r2);padding:14px;margin-bottom:20px}
+.rev-title{font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.rev-item{background:var(--card);border:1px solid rgba(245,158,11,.15);border-radius:var(--r);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.rev-item:last-child{margin-bottom:0}
+
+/* ── FORM ── */
+.form-wrap{max-width:520px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:inherit;font-size:14px;transition:.15s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow)}
+.fg select option{background:var(--card)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:var(--r);border:none;font-weight:700;font-size:14px;font-family:inherit;cursor:pointer;transition:.15s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-d)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-sm{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:var(--r);font-size:11px;cursor:pointer;font-family:inherit}
+.btn-sm:hover{background:var(--surface);color:var(--text)}
+.err{color:var(--red);font-size:12px;margin-top:8px}
+.success-msg{color:var(--green);font-size:12px;margin-top:8px;font-weight:600}
+
+/* ── HISTORY ── */
+.hist-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+.hist-topic{font-weight:600;font-size:13px;margin-bottom:3px}
+.hist-meta{font-size:11px;color:var(--muted)}
+.hist-badge{padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700;flex-shrink:0}
+
+/* ── CONFIG FORM ── */
+.cfg-section{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:14px}
+.cfg-title{font-size:13px;font-weight:700;margin-bottom:14px;color:var(--text)}
+
+/* ── MISC ── */
+.empty{text-align:center;padding:52px 20px;color:var(--hint);font-size:13px}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#fff;padding:10px 18px;border-radius:var(--r);font-size:13px;font-weight:600;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:999}
+.toast.err-t{background:var(--red)}
+.toast.show{opacity:1;transform:translateY(0)}
+.loading-overlay{position:fixed;inset:0;background:rgba(15,17,23,.7);display:flex;align-items:center;justify-content:center;z-index:1000;display:none}
+.loading-overlay.show{display:flex}
+.spinner-lg{width:36px;height:36px;border:3px solid rgba(108,99,255,.3);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="overlay"><div class="spinner-lg"></div></div>
+<div class="toast" id="toast"></div>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="brand">📊 <span>Petrobras</span> E18</div>
+    <button class="nav-btn on" onclick="goTo('dashboard',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-btn" onclick="goTo('registrar',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Registrar
+    </button>
+    <button class="nav-btn" onclick="goTo('materias',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Por Matéria
+    </button>
+    <button class="nav-btn" onclick="goTo('historico',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Histórico
+    </button>
+    <button class="nav-btn" onclick="goTo('config',this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configurar
+    </button>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="view on">
+      <div class="page-hd">
+        <span class="page-title">Dashboard Operacional</span>
+        <span id="db-status" class="badge-db badge-warn">Demo (local)</span>
+      </div>
+      <div id="dash-content"></div>
+    </div>
+
+    <!-- REGISTRAR -->
+    <div id="view-registrar" class="view">
+      <div class="page-hd"><span class="page-title">Registrar Sessão</span></div>
+      <div class="form-wrap">
+        <div class="fg"><label>Data</label><input type="date" id="f-data"></div>
+        <div class="fg">
+          <label>Matéria</label>
+          <select id="f-materia">
+            <option value="LP">Língua Portuguesa</option>
+            <option value="LI">Língua Inglesa</option>
+            <option value="B1">Bloco I — Eng. Organizacional / Cadeia / Econômica</option>
+            <option value="B2">Bloco II — Pesquisa Operacional / Eng. Trabalho / Sustentabilidade</option>
+            <option value="B3">Bloco III — Operações / Qualidade / Produto</option>
+          </select>
+        </div>
+        <div class="fg"><label>Tópico estudado</label><input type="text" id="f-topico" placeholder="Ex: Gestão de Estoques, Crase..."></div>
+        <div class="form-row">
+          <div class="fg"><label>Questões feitas</label><input type="number" id="f-feitas" min="1" placeholder="0"></div>
+          <div class="fg"><label>Acertos</label><input type="number" id="f-acertos" min="0" placeholder="0"></div>
+        </div>
+        <div class="fg"><label>Tempo de estudo (min)</label><input type="number" id="f-tempo" min="1" placeholder="60"></div>
+        <div class="fg">
+          <label>Tipo de atividade</label>
+          <select id="f-tipo">
+            <option value="questoes">Questões (plataforma/apostila)</option>
+            <option value="revisao">Revisão teórica</option>
+            <option value="leitura">Leitura de material</option>
+            <option value="simulado">Simulado completo</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btn-save" onclick="saveSession()">
+          <span id="save-spinner" class="spinner" style="display:none"></span>
+          Registrar sessão
+        </button>
+        <div id="form-err" class="err"></div>
+        <div id="form-ok" class="success-msg"></div>
+      </div>
+    </div>
+
+    <!-- POR MATÉRIA -->
+    <div id="view-materias" class="view">
+      <div class="page-hd"><span class="page-title">Desempenho por Matéria</span></div>
+      <div id="mat-content"></div>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div id="view-historico" class="view">
+      <div class="page-hd"><span class="page-title">Histórico de Sessões</span></div>
+      <div id="hist-content"></div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="view-config" class="view">
+      <div class="page-hd"><span class="page-title">Configurar Conexão</span></div>
+
+      <div class="cfg-section">
+        <div class="cfg-title">🔌 Supabase (recomendado — gratuito e persistente)</div>
+        <div class="fg">
+          <label>Supabase URL</label>
+          <input type="text" id="cfg-url" placeholder="https://xyzcompany.supabase.co">
+        </div>
+        <div class="fg">
+          <label>Supabase anon key</label>
+          <input type="text" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+        </div>
+        <div class="fg">
+          <label>Data alvo da prova</label>
+          <input type="date" id="cfg-prova">
+        </div>
+        <div class="fg">
+          <label>Meta de questões</label>
+          <input type="number" id="cfg-meta" value="5000" min="100">
+        </div>
+        <button class="btn btn-primary" onclick="saveConfig()">Salvar configuração</button>
+        <div id="cfg-msg" style="font-size:12px;margin-top:8px"></div>
+      </div>
+
+      <div class="cfg-section">
+        <div class="cfg-title">📋 SQL para criar a tabela no Supabase</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Cole isso no <strong>SQL Editor</strong> do seu projeto Supabase e clique em Run:</div>
+        <pre style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;font-size:11px;overflow-x:auto;color:#a0f0b0;line-height:1.6">CREATE TABLE IF NOT EXISTS sessoes (
+  id         bigserial PRIMARY KEY,
+  data       date NOT NULL,
+  materia    text NOT NULL,
+  topico     text NOT NULL,
+  feitas     int  NOT NULL DEFAULT 0,
+  acertos    int  NOT NULL DEFAULT 0,
+  tempo      int  NOT NULL DEFAULT 0,
+  tipo       text NOT NULL DEFAULT 'questoes',
+  revisado   boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Habilitar Row Level Security (leitura pública para demo)
+ALTER TABLE sessoes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all" ON sessoes FOR ALL USING (true) WITH CHECK (true);</pre>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  CONFIG & STATE
+// ══════════════════════════════════════════════
+const CFG_KEY = 'pb_cfg_v1';
+const LOCAL_KEY = 'pb_sessions_v4';
+const META_DEFAULT = 5000;
+const ALERT_PCT = 70;
+
+const MATERIAS = {LP:'Língua Portuguesa',LI:'Língua Inglesa',B1:'Bloco I',B2:'Bloco II',B3:'Bloco III'};
+const COLORS   = {LP:'#6c63ff',LI:'#3b82f6',B1:'#10b981',B2:'#f59e0b',B3:'#ef4444'};
+
+let cfg = {url:'',key:'',prova:'',meta:META_DEFAULT};
+let sessions = [];
+let charts = {};
+let useSupabase = false;
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+(async function init(){
+  try { cfg = {...cfg,...JSON.parse(localStorage.getItem(CFG_KEY)||'{}')} } catch(e){}
+
+  document.getElementById('f-data').valueAsDate = new Date();
+  document.getElementById('cfg-url').value  = cfg.url  || '';
+  document.getElementById('cfg-key').value  = cfg.key  || '';
+  document.getElementById('cfg-meta').value = cfg.meta || 5000;
+  document.getElementById('cfg-prova').value = cfg.prova || '';
+
+  if(cfg.url && cfg.key){
+    useSupabase = true;
+    await loadFromSupabase();
+  } else {
+    try { sessions = JSON.parse(localStorage.getItem(LOCAL_KEY)||'[]'); } catch(e){}
+  }
+  renderDashboard();
+})();
+
+// ══════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════
+function goTo(id, btn){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('view-'+id).classList.add('on');
+  if(id==='dashboard')  renderDashboard();
+  if(id==='materias')   renderMaterias();
+  if(id==='historico')  renderHistorico();
+}
+
+// ══════════════════════════════════════════════
+//  SUPABASE API
+// ══════════════════════════════════════════════
+function sbHeaders(){
+  return {'Content-Type':'application/json','apikey':cfg.key,'Authorization':'Bearer '+cfg.key,'Prefer':'return=representation'};
+}
+
+async function loadFromSupabase(){
+  setOverlay(true);
+  try {
+    const r = await fetch(`${cfg.url}/rest/v1/sessoes?order=created_at.desc&limit=500`,{headers:sbHeaders()});
+    if(!r.ok) throw new Error('Erro '+r.status);
+    sessions = await r.json();
+    document.getElementById('db-status').textContent = '✓ Supabase conectado';
+    document.getElementById('db-status').className = 'badge-db badge-ok';
+  } catch(e){
+    showToast('Supabase offline — usando modo local','err');
+    useSupabase = false;
+    try { sessions = JSON.parse(localStorage.getItem(LOCAL_KEY)||'[]'); } catch(ee){}
+  }
+  setOverlay(false);
+}
+
+async function insertSupabase(s){
+  const r = await fetch(`${cfg.url}/rest/v1/sessoes`,{
+    method:'POST',headers:sbHeaders(),
+    body:JSON.stringify({data:s.data,materia:s.materia,topico:s.topico,feitas:s.feitas,acertos:s.acertos,tempo:s.tempo,tipo:s.tipo,revisado:false})
+  });
+  if(!r.ok) throw new Error('Insert failed '+r.status);
+  const rows = await r.json();
+  return rows[0];
+}
+
+async function deleteSupabase(id){
+  const r = await fetch(`${cfg.url}/rest/v1/sessoes?id=eq.${id}`,{method:'DELETE',headers:sbHeaders()});
+  if(!r.ok) throw new Error('Delete failed');
+}
+
+async function patchSupabase(id, data){
+  const r = await fetch(`${cfg.url}/rest/v1/sessoes?id=eq.${id}`,{
+    method:'PATCH',headers:sbHeaders(),body:JSON.stringify(data)
+  });
+  if(!r.ok) throw new Error('Patch failed');
+}
+
+// ══════════════════════════════════════════════
+//  SAVE SESSION
+// ══════════════════════════════════════════════
+async function saveSession(){
+  const d    = v('f-data'), mat = v('f-materia'), top = v('f-topico').trim();
+  const feitas = int('f-feitas'), acertos = int('f-acertos');
+  const tempo  = int('f-tempo'), tipo = v('f-tipo');
+  const err = document.getElementById('form-err');
+  const ok  = document.getElementById('form-ok');
+  err.textContent=''; ok.textContent='';
+
+  if(!top)           return err.textContent='Informe o tópico.';
+  if(feitas<1)       return err.textContent='Questões feitas deve ser ≥ 1.';
+  if(acertos<0||acertos>feitas) return err.textContent='Acertos inválidos.';
+  if(tempo<1)        return err.textContent='Informe o tempo (min).';
+
+  setBtnLoading(true);
+  const sess = {id:Date.now(),data:d,materia:mat,topico:top,feitas,acertos,tempo,tipo,revisado:false};
+
+  try {
+    if(useSupabase){
+      const inserted = await insertSupabase(sess);
+      sessions.unshift(inserted||sess);
+    } else {
+      sessions.unshift(sess);
+      localStorage.setItem(LOCAL_KEY,JSON.stringify(sessions));
+    }
+    ['f-topico','f-feitas','f-acertos','f-tempo'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('f-data').valueAsDate = new Date();
+    ok.textContent = '✓ Sessão salva com sucesso!';
+    showToast('Sessão registrada!');
+    setTimeout(()=>goTo('dashboard',document.querySelector('.nav-btn')),1200);
+  } catch(e){
+    err.textContent = 'Erro ao salvar: '+e.message;
+  }
+  setBtnLoading(false);
+}
+
+// ══════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════
+async function saveConfig(){
+  cfg.url  = v('cfg-url').replace(/\/$/,'');
+  cfg.key  = v('cfg-key');
+  cfg.meta = parseInt(v('cfg-meta'))||5000;
+  cfg.prova= v('cfg-prova');
+  localStorage.setItem(CFG_KEY,JSON.stringify(cfg));
+  const msg = document.getElementById('cfg-msg');
+  if(cfg.url && cfg.key){
+    msg.style.color='var(--yellow)'; msg.textContent='Testando conexão...';
+    useSupabase = true;
+    await loadFromSupabase();
+    msg.style.color='var(--green)'; msg.textContent='✓ Configuração salva e conectado!';
+    renderDashboard();
+  } else {
+    msg.style.color='var(--muted)'; msg.textContent='Configuração salva (modo local ativo).';
+  }
+}
+
+// ══════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════
+function renderDashboard(){
+  destroyCharts();
+  const META = cfg.meta || META_DEFAULT;
+  let tF=0,tA=0,tT=0; const dias=new Set();
+  sessions.forEach(s=>{tF+=s.feitas;tA+=s.acertos;tT+=s.tempo;dias.add(s.data)});
+  const tE = tF-tA;
+  const pctG = pct(tA,tF);
+  const cor = pctG>=75?'var(--green)':pctG>=60?'var(--yellow)':'var(--red)';
+  const pctMeta = Math.min(100,pct(tF,META));
+
+  // KPIs de engenharia de produção
+  const throughput = tT>0 ? (tF/(tT/60)).toFixed(1) : '—';   // q/h
+  const oee        = tT>0 ? pctG : 0;                          // % acertos = qualidade
+  const dias_restantes = diasRestantes();
+  const takt = dias_restantes>0 ? Math.ceil((META-tF)/dias_restantes) : 0;
+  const streak = calcStreak();
+  const idealHoje = idealProgress(META);
+
+  let html = '';
+
+  // Banner se não configurado
+  if(!useSupabase){
+    html += `<div class="cfg-banner">
+      <strong>⚠️ Modo demonstração (dados locais)</strong>
+      Seus dados estão salvos apenas neste navegador. Para acesso multi-dispositivo, 
+      <a href="#" onclick="goTo('config',document.querySelectorAll('.nav-btn')[4]);return false">configure o Supabase em 5 minutos</a>.
+    </div>`;
+  }
+
+  // Métricas principais
+  html += `<div class="metrics">
+    <div class="mc">
+      <div class="mc-lbl">Questões resolvidas</div>
+      <div class="mc-val" style="color:var(--primary)">${tF.toLocaleString('pt-BR')}</div>
+      <div class="mc-sub">meta: ${META.toLocaleString('pt-BR')}</div>
+      <div class="mc-accent" style="color:var(--muted)">faltam ${Math.max(0,META-tF).toLocaleString('pt-BR')}</div>
+    </div>
+    <div class="mc">
+      <div class="mc-lbl">Precisão global</div>
+      <div class="mc-val" style="color:${cor}">${pctG}%</div>
+      <div class="mc-sub">${tA} acertos · ${tE} erros</div>
+    </div>
+    <div class="mc">
+      <div class="mc-lbl">Tempo total</div>
+      <div class="mc-val">${fmtTime(tT)}</div>
+      <div class="mc-sub">${dias.size} dias ativos</div>
+      <div class="mc-accent" style="color:${streak>=5?'var(--green)':'var(--muted)'}">🔥 ${streak}d sequência</div>
+    </div>
+    <div class="mc">
+      <div class="mc-lbl">Progresso da meta</div>
+      <div class="mc-val" style="color:var(--primary)">${pctMeta}%</div>
+      <div class="mc-sub">ideal hoje: ${idealHoje.toLocaleString('pt-BR')}</div>
+      <div class="mc-accent" style="color:${tF>=idealHoje?'var(--green)':'var(--red)'}">${tF>=idealHoje?'✓ No prazo':'⚠ Atrasado'}</div>
+    </div>
+  </div>`;
+
+  // Burndown progress bar
+  const idealPct = Math.min(100,pct(idealHoje,META));
+  html += `<div class="prog-wrap">
+    <div class="prog-hd">
+      <span>Burndown · ${tF.toLocaleString('pt-BR')} / ${META.toLocaleString('pt-BR')} questões</span>
+      <span>${pctMeta}%</span>
+    </div>
+    <div class="prog-track">
+      <div class="prog-fill" style="width:${pctMeta}%"></div>
+      <div class="prog-ideal" style="left:${idealPct}%" title="Ideal hoje"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--hint);margin-top:4px">
+      <span>▎ linha amarela = progresso ideal hoje</span>
+      <span>${dias_restantes} dias restantes</span>
+    </div>
+  </div>`;
+
+  // KPI cards de Eng. de Produção
+  html += `<div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-top"><div class="kpi-name">Takt Time</div><div class="kpi-icon">⏱</div></div>
+      <div class="kpi-val" style="color:var(--primary)">${takt > 0 ? takt : '—'} <span style="font-size:14px;font-weight:400;color:var(--muted)">q/dia</span></div>
+      <div class="kpi-desc">Cadência necessária nos dias restantes para bater ${META.toLocaleString('pt-BR')} questões.</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top"><div class="kpi-name">Throughput</div><div class="kpi-icon">🚀</div></div>
+      <div class="kpi-val" style="color:var(--blue)">${throughput} <span style="font-size:14px;font-weight:400;color:var(--muted)">q/h</span></div>
+      <div class="kpi-desc">Vazão da sua máquina de estudo. Meta sugerida: ≥ 60 q/h para 1h diária.</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top"><div class="kpi-name">OEE · Qualidade</div><div class="kpi-icon">⚙️</div></div>
+      <div class="kpi-val" style="color:${cor}">${oee}%</div>
+      <div class="kpi-desc">Taxa de acertos = eficiência de qualidade. Alvo: ≥ 75% para passar na seletiva.</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top"><div class="kpi-name">Ritmo médio</div><div class="kpi-icon">📐</div></div>
+      <div class="kpi-val" style="color:var(--muted)">${tF>0?(tT/tF).toFixed(1):'—'} <span style="font-size:14px;font-weight:400;color:var(--hint)">min/q</span></div>
+      <div class="kpi-desc">Tempo médio por questão. Provas Petrobras: ~2–3 min/questão é eficiente.</div>
+    </div>
+  </div>`;
+
+  // Fila de revisão
+  const rev = sessions.filter(s=>pct(s.acertos,s.feitas)<ALERT_PCT && !s.revisado);
+  if(rev.length>0){
+    html += `<div class="rev-box"><div class="rev-title">⚠️ Fila de revisão — aproveitamento abaixo de ${ALERT_PCT}%</div>`;
+    rev.slice(0,5).forEach(r=>{
+      const p = pct(r.acertos,r.feitas);
+      html += `<div class="rev-item">
+        <div>
+          <div style="font-size:13px;font-weight:600">${r.topico} <span style="font-weight:400;font-size:11px;color:var(--muted)">(${MATERIAS[r.materia]})</span></div>
+          <div style="font-size:11px;color:var(--red);margin-top:2px">${p}% de aproveitamento · ${r.feitas} questões</div>
+        </div>
+        <button class="btn-sm" onclick="marcarRevisado(${r.id})">✓ Revisado</button>
+      </div>`;
+    });
+    if(rev.length>5) html+=`<div style="font-size:11px;color:var(--muted);padding:6px 0">+${rev.length-5} tópicos...</div>`;
+    html += '</div>';
+  }
+
+  // Gráficos
+  if(sessions.length>0){
+    html += `<div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Burndown Chart — Real vs Ideal</div>
+        <div class="chart-wrap"><canvas id="burnChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Precisão acumulada</div>
+        <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+      </div>
+    </div>`;
+
+    // Heatmap
+    html += `<div class="heatmap-wrap">
+      <div class="chart-title">Heatmap de consistência — últimas 26 semanas</div>
+      <div id="heatmap-inner"></div>
+      <div class="hm-legend">
+        <span>Menos</span>
+        <div class="hm-sq" style="background:var(--surface)"></div>
+        <div class="hm-sq" style="background:#3730a3"></div>
+        <div class="hm-sq" style="background:#6c63ff"></div>
+        <div class="hm-sq" style="background:#a78bfa"></div>
+        <div class="hm-sq" style="background:#ddd6fe"></div>
+        <span>Mais</span>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('dash-content').innerHTML = html;
+  if(sessions.length>0) setTimeout(()=>{renderBurndown(META);renderPie(tA,tE);renderHeatmap();},60);
+}
+
+// ── Burndown Chart ──
+function renderBurndown(META){
+  const evMap={};
+  sessions.forEach(s=>{
+    if(!evMap[s.data]) evMap[s.data]={feitas:0};
+    evMap[s.data].feitas+=s.feitas;
+  });
+  const sorted = Object.entries(evMap).sort((a,b)=>a[0].localeCompare(b[0]));
+  const labels=[], realData=[], idealData=[];
+  let cum=0;
+
+  // real
+  sorted.forEach(([d,v])=>{
+    cum+=v.feitas; labels.push(fmtDate(d)); realData.push(cum);
+  });
+
+  // ideal: linha do primeiro dia de estudo até a prova
+  const firstDay = sorted.length>0 ? new Date(sorted[0][0]+'T12:00:00') : new Date();
+  const provaDay = cfg.prova ? new Date(cfg.prova+'T12:00:00') : new Date(firstDay.getTime()+365*86400000);
+  const totalDays = Math.max(1,Math.round((provaDay-firstDay)/86400000));
+  labels.forEach((_,i)=>{
+    const dayN = i+1;
+    idealData.push(Math.round(META*(dayN/totalDays)));
+  });
+
+  const ctx = document.getElementById('burnChart');
+  if(!ctx) return;
+  charts.burn = new Chart(ctx.getContext('2d'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Real',data:realData,borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,.1)',fill:true,tension:.35,pointRadius:3,borderWidth:2},
+      {label:'Ideal',data:idealData,borderColor:'#f59e0b',backgroundColor:'transparent',tension:.1,pointRadius:0,borderWidth:1.5,borderDash:[5,4]}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8890a8',font:{size:10}},boxWidth:12,padding:8}},
+      scales:{
+        y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8890a8',font:{size:10}}},
+        x:{grid:{display:false},ticks:{color:'#8890a8',font:{size:10},maxRotation:30,autoSkip:true,maxTicksLimit:8}}
+      }
+    }
+  });
+}
+
+// ── Pie ──
+function renderPie(tA,tE){
+  const ctx = document.getElementById('pieChart');
+  if(!ctx) return;
+  charts.pie = new Chart(ctx.getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['Acertos','Erros'],datasets:[{data:[tA,tE],backgroundColor:['#10b981','#ef4444'],borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8890a8',font:{size:11}}}},cutout:'68%'}
+  });
+}
+
+// ── Heatmap estilo GitHub ──
+function renderHeatmap(){
+  const today = new Date(); today.setHours(12,0,0,0);
+  const WEEKS = 26;
+  const startDay = new Date(today);
+  startDay.setDate(startDay.getDate()-(WEEKS*7-1));
+
+  // mapa de questões por dia
+  const dayMap={};
+  sessions.forEach(s=>{
+    dayMap[s.data]=(dayMap[s.data]||0)+s.feitas;
+  });
+
+  // intensidades
+  const vals = Object.values(dayMap);
+  const maxVal = vals.length ? Math.max(...vals) : 1;
+  function intensity(n){
+    if(!n) return 0;
+    const r = n/maxVal;
+    if(r<.25) return 1;
+    if(r<.5)  return 2;
+    if(r<.75) return 3;
+    return 4;
+  }
+  const CELL_COLORS = ['var(--surface)','#3730a3','#6c63ff','#a78bfa','#ddd6fe'];
+
+  // células: grid 7 linhas × WEEKS colunas
+  // alinhamos com o dia da semana do startDay
+  const cells=[]; let d=new Date(startDay);
+  for(let i=0;i<WEEKS*7;i++){
+    const iso=d.toISOString().split('T')[0];
+    cells.push({iso,n:dayMap[iso]||0,future:d>today});
+    d=new Date(d); d.setDate(d.getDate()+1);
+  }
+
+  // month labels
+  const monthLabel={}; cells.forEach((c,i)=>{
+    const m=c.iso.substring(0,7);
+    if(!monthLabel[m]) monthLabel[m]=Math.floor(i/7);
+  });
+  let mlHtml='';
+  const colCount=WEEKS;
+  for(let col=0;col<colCount;col++){
+    const entry=Object.entries(monthLabel).find(([_,c])=>c===col);
+    mlHtml+=`<div style="width:16px;text-align:center">${entry?new Date(entry[0]+'-15').toLocaleDateString('pt-BR',{month:'short'}).replace('.',''):''}</div>`;
+  }
+
+  let grid='<div class="heatmap-grid">';
+  cells.forEach(c=>{
+    const inten=c.future?0:intensity(c.n);
+    const bg=CELL_COLORS[inten];
+    const tip=c.future?'futuro':`${c.iso}: ${c.n} questões`;
+    grid+=`<div class="hm-cell" style="background:${bg};opacity:${c.future?.3:1}" title="${tip}"></div>`;
+  });
+  grid+='</div>';
+
+  document.getElementById('heatmap-inner').innerHTML=
+    `<div class="month-labels">${mlHtml}</div>${grid}`;
+}
+
+// ══════════════════════════════════════════════
+//  POR MATÉRIA
+// ══════════════════════════════════════════════
+function renderMaterias(){
+  destroyCharts();
+  const byM={};
+  Object.keys(MATERIAS).forEach(k=>{byM[k]={feitas:0,acertos:0,tempo:0,topicos:{}}});
+  sessions.forEach(s=>{
+    const m=byM[s.materia];if(!m)return;
+    m.feitas+=s.feitas;m.acertos+=s.acertos;m.tempo+=s.tempo;
+    if(!m.topicos[s.topico])m.topicos[s.topico]={feitas:0,acertos:0};
+    m.topicos[s.topico].feitas+=s.feitas;
+    m.topicos[s.topico].acertos+=s.acertos;
+  });
+
+  let html='';
+  if(sessions.length>0){
+    html+=`<div class="chart-card" style="margin-bottom:16px">
+      <div class="chart-title">Distribuição de questões por matéria</div>
+      <div class="chart-wrap"><canvas id="matChart"></canvas></div>
+    </div>`;
+  }
+
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">';
+  Object.entries(MATERIAS).forEach(([key,nome])=>{
+    const m=byM[key];
+    const p=pct(m.acertos,m.feitas);
+    const cor=COLORS[key];
+    const bc=p>=75?'badge-ok':p>=60?'badge-warn':'badge-bad';
+    const topicos=Object.entries(m.topicos);
+    html+=`<div class="chart-card" style="border-left:3px solid ${cor}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:13px;font-weight:700;color:${cor}">${nome}</div>
+        <span class="badge-db ${bc}">${p}%</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${m.feitas} questões · ${fmtTime(m.tempo)}</div>
+      <div style="background:var(--surface);border-radius:99px;height:5px;overflow:hidden;margin-bottom:8px">
+        <div style="width:${p}%;background:${cor};height:100%;border-radius:99px"></div>
+      </div>`;
+    if(topicos.length){
+      html+=`<div style="border-top:1px solid var(--border);padding-top:8px">`;
+      topicos.sort((a,b)=>pct(a[1].acertos,a[1].feitas)-pct(b[1].acertos,b[1].feitas))
+        .forEach(([t,d])=>{
+          const tp=pct(d.acertos,d.feitas);
+          html+=`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;color:var(--muted)">
+            <span>${t}</span>
+            <span style="color:${tp<ALERT_PCT?'var(--red)':'var(--green)'};font-weight:700">${tp}%</span>
+          </div>`;
+        });
+      html+=`</div>`;
+    } else {
+      html+=`<div style="font-size:11px;color:var(--hint)">Nenhuma sessão ainda</div>`;
+    }
+    html+='</div>';
+  });
+  html+='</div>';
+
+  document.getElementById('mat-content').innerHTML=html;
+  if(sessions.length>0) setTimeout(()=>{
+    const labels=Object.values(MATERIAS);
+    const dataF=Object.keys(MATERIAS).map(k=>byM[k].feitas);
+    const dataA=Object.keys(MATERIAS).map(k=>byM[k].acertos);
+    const bgs=Object.keys(MATERIAS).map(k=>COLORS[k]);
+    const ctx=document.getElementById('matChart');if(!ctx)return;
+    charts.mat=new Chart(ctx.getContext('2d'),{
+      type:'bar',
+      data:{labels,datasets:[
+        {label:'Feitas',data:dataF,backgroundColor:bgs.map(c=>c+'33'),borderColor:bgs,borderWidth:1.5},
+        {label:'Acertos',data:dataA,backgroundColor:bgs.map(c=>c+'aa'),borderColor:bgs,borderWidth:0}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#8890a8',font:{size:10}}}},
+        scales:{
+          y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8890a8',font:{size:10}}},
+          x:{grid:{display:false},ticks:{color:'#8890a8',font:{size:10},maxRotation:20}}
+        }
+      }
+    });
+  },60);
+}
+
+// ══════════════════════════════════════════════
+//  HISTÓRICO
+// ══════════════════════════════════════════════
+function renderHistorico(){
+  const el=document.getElementById('hist-content');
+  if(!sessions.length){el.innerHTML='<div class="empty">Nenhuma sessão registrada ainda.</div>';return;}
+  let html='';
+  sessions.forEach(s=>{
+    const p=pct(s.acertos,s.feitas);
+    const bc=p>=75?'badge-ok':p>=60?'badge-warn':'badge-bad';
+    html+=`<div class="hist-item">
+      <div style="flex:1;min-width:0">
+        <div class="hist-topic">${s.topico}${s.revisado?' <span style="font-size:10px;background:var(--green-bg);color:var(--green);padding:2px 6px;border-radius:99px;font-weight:600">✓ Rev</span>':''}</div>
+        <div class="hist-meta">${MATERIAS[s.materia]||s.materia} · ${fmtDate(s.data)} · ${s.feitas}q · ${fmtTime(s.tempo)} · ${s.tipo}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span class="hist-badge badge-db ${bc}">${p}%</span>
+        <button class="btn-sm" onclick="deleteSess(${s.id})" title="Excluir">🗑</button>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════
+//  ACTIONS
+// ══════════════════════════════════════════════
+window.marcarRevisado = async function(id){
+  const s=sessions.find(x=>x.id==id);
+  if(!s) return;
+  s.revisado=true;
+  if(useSupabase){ try{await patchSupabase(id,{revisado:true})}catch(e){} }
+  else localStorage.setItem(LOCAL_KEY,JSON.stringify(sessions));
+  renderDashboard();
+};
+
+window.deleteSess = async function(id){
+  if(!confirm('Excluir esta sessão?')) return;
+  if(useSupabase){ try{await deleteSupabase(id)}catch(e){showToast('Erro ao deletar','err');return;} }
+  sessions=sessions.filter(x=>x.id!=id);
+  if(!useSupabase) localStorage.setItem(LOCAL_KEY,JSON.stringify(sessions));
+  renderHistorico();
+  showToast('Sessão excluída');
+};
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function pct(a,t){return t===0?0:Math.round((a/t)*100)}
+function fmtTime(m){return m<60?`${m}min`:`${Math.floor(m/60)}h ${m%60}m`}
+function fmtDate(iso){return iso?new Date(iso+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):''}
+function v(id){return document.getElementById(id)?.value||''}
+function int(id){return parseInt(document.getElementById(id)?.value)||0}
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(type==='err'?' err-t':'')+' show';
+  setTimeout(()=>t.className='toast',2800);
+}
+function setOverlay(on){document.getElementById('overlay').className='loading-overlay'+(on?' show':'')}
+function setBtnLoading(on){
+  const btn=document.getElementById('btn-save');
+  const sp=document.getElementById('save-spinner');
+  btn.disabled=on; sp.style.display=on?'inline-block':'none';
+}
+function destroyCharts(){Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});charts={}}
+
+function calcStreak(){
+  const dias=[...new Set(sessions.map(s=>s.data))].sort().reverse();
+  if(!dias.length) return 0;
+  const today=new Date().toISOString().split('T')[0];
+  const yest=new Date(Date.now()-86400000).toISOString().split('T')[0];
+  if(dias[0]!==today&&dias[0]!==yest) return 0;
+  let streak=1;
+  for(let i=1;i<dias.length;i++){
+    const prev=new Date(dias[i-1]+'T12:00:00');
+    const curr=new Date(dias[i]+'T12:00:00');
+    if(Math.round((prev-curr)/86400000)===1) streak++; else break;
+  }
+  return streak;
+}
+
+function diasRestantes(){
+  if(!cfg.prova) return 180; // default
+  const prova=new Date(cfg.prova+'T12:00:00');
+  const hoje=new Date(); hoje.setHours(12,0,0,0);
+  return Math.max(0,Math.round((prova-hoje)/86400000));
+}
+
+function idealProgress(META){
+  // questões ideais acumuladas até hoje
+  if(!cfg.prova || !sessions.length) return 0;
+  const dias=sessions.map(s=>s.data).sort();
+  const firstDay=new Date(dias[0]+'T12:00:00');
+  const prova=new Date(cfg.prova+'T12:00:00');
+  const hoje=new Date(); hoje.setHours(12,0,0,0);
+  const totalDays=Math.max(1,Math.round((prova-firstDay)/86400000));
+  const daysPassed=Math.max(0,Math.round((hoje-firstDay)/86400000));
+  return Math.round(META*(daysPassed/totalDays));
+}
+</script>
+</body>
+</html>
