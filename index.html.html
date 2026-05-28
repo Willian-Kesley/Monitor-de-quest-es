@@ -342,13 +342,25 @@ function goTo(id, btn){
 //  SUPABASE API
 // ══════════════════════════════════════════════
 function sbHeaders(){
-  return {'Content-Type':'application/json','apikey':cfg.key,'Authorization':'Bearer '+cfg.key,'Prefer':'return=representation'};
+  // Supabase novo formato (sb_publishable_...) usa Authorization diferente
+  const isNewKey = cfg.key && cfg.key.startsWith('sb_');
+  return {
+    'Content-Type':'application/json',
+    'apikey': cfg.key,
+    'Authorization': isNewKey ? `Bearer ${cfg.key}` : `Bearer ${cfg.key}`,
+    'Prefer':'return=representation'
+  };
+}
+
+function sbUrl(){
+  // Novo formato de URL do Supabase (pode vir sem /rest/v1 no final)
+  return cfg.url.replace(/\/(rest\/v1\/?)?$/,'');
 }
 
 async function loadFromSupabase(){
   setOverlay(true);
   try {
-    const r = await fetch(`${cfg.url}/rest/v1/sessoes?order=created_at.desc&limit=500`,{headers:sbHeaders()});
+    const r = await fetch(`${sbUrl()}/rest/v1/sessoes?order=created_at.desc&limit=500`,{headers:sbHeaders()});
     if(!r.ok) throw new Error('Erro '+r.status);
     sessions = await r.json();
     document.getElementById('db-status').textContent = '✓ Supabase conectado';
@@ -362,7 +374,7 @@ async function loadFromSupabase(){
 }
 
 async function insertSupabase(s){
-  const r = await fetch(`${cfg.url}/rest/v1/sessoes`,{
+  const r = await fetch(`${sbUrl()}/rest/v1/sessoes`,{
     method:'POST',headers:sbHeaders(),
     body:JSON.stringify({data:s.data,materia:s.materia,topico:s.topico,feitas:s.feitas,acertos:s.acertos,tempo:s.tempo,tipo:s.tipo,revisado:false})
   });
@@ -372,12 +384,12 @@ async function insertSupabase(s){
 }
 
 async function deleteSupabase(id){
-  const r = await fetch(`${cfg.url}/rest/v1/sessoes?id=eq.${id}`,{method:'DELETE',headers:sbHeaders()});
+  const r = await fetch(`${sbUrl()}/rest/v1/sessoes?id=eq.${id}`,{method:'DELETE',headers:sbHeaders()});
   if(!r.ok) throw new Error('Delete failed');
 }
 
 async function patchSupabase(id, data){
-  const r = await fetch(`${cfg.url}/rest/v1/sessoes?id=eq.${id}`,{
+  const r = await fetch(`${sbUrl()}/rest/v1/sessoes?id=eq.${id}`,{
     method:'PATCH',headers:sbHeaders(),body:JSON.stringify(data)
   });
   if(!r.ok) throw new Error('Patch failed');
