@@ -178,16 +178,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <div class="form-wrap">
           <div class="fg"><label>Data</label><input type="date" id="f-data"></div>
           <div class="fg">
-            <label>Matéria</label>
+            <label>Matéria / Bloco</label>
             <select id="f-materia">
+              <option value="" disabled selected>Selecione o Bloco...</option>
               <option value="LP">Língua Portuguesa</option>
               <option value="LI">Língua Inglesa</option>
-              <option value="B1">Bloco I — Eng. Organizacional / Cadeia / Econômica</option>
+              <option value="B1">Bloco I — Eng. Organizacional / Cadeia de Sup. / Econômica</option>
               <option value="B2">Bloco II — Pesquisa Operacional / Eng. Trabalho / Sustentabilidade</option>
               <option value="B3">Bloco III — Operações / Qualidade / Produto</option>
             </select>
           </div>
-          <div class="fg"><label>Tópico estudado</label><input type="text" id="f-topico" placeholder="Ex: Gestão de Estoques, Crase..."></div>
+          
+          <div class="fg">
+            <label>Tópico estudado (Edital)</label>
+            <input type="text" id="f-topico" list="lista-topicos" placeholder="Clique para ver a lista ou digite um tópico...">
+            <datalist id="lista-topicos"></datalist>
+          </div>
 
           <div class="fg">
             <label>Tipo de atividade</label>
@@ -286,6 +292,40 @@ const DIAS_ESQUECIMENTO = 21;
 const MATERIAS = {LP:'Língua Portuguesa',LI:'Língua Inglesa',B1:'Bloco I',B2:'Bloco II',B3:'Bloco III'};
 const COLORS   = {LP:'#a78bfa',LI:'#3b82f6',B1:'#008c45',B2:'#fcb614',B3:'#ef4444'};
 
+// Dicionário com os Tópicos do Edital Ênfase 18
+const EDITAL = {
+  LP: [
+    'Compreensão e interpretação de textos', 'Ortografia oficial', 'Acentuação gráfica',
+    'Emprego das classes de palavras', 'Emprego do sinal indicativo de crase', 
+    'Sintaxe da oração e do período', 'Pontuação', 'Concordância nominal e verbal', 
+    'Regência nominal e verbal', 'Significação das palavras'
+  ],
+  LI: [
+    'Compreensão de textos escritos em língua inglesa', 'Itens gramaticais', 'Vocabulário'
+  ],
+  B1: [
+    '1.1 Gestão de Desempenho Organizacional', '1.2 Planejamento Estratégico', '1.3 Gerenciamento de Projetos',
+    '1.4 Gestão da Cadeia de Suprimentos', '1.5 Gestão de estoques', '1.6 Projeto e Análise de Sistemas Logísticos',
+    '1.7 Logística Empresarial', '1.8 Transporte e Distribuição Física', '1.9 Matemática Financeira',
+    '1.10 Análise de Investimentos', '1.11 Análise de Risco em Investimentos', '1.12 Contabilidade de Custos',
+    '1.13 Gestão de Custos', '1.14 Contabilidade Gerencial'
+  ],
+  B2: [
+    '1.1 Modelagem, Simulação e Otimização', '1.2 Programação Matemática', '1.3 Processos Decisórios',
+    '1.4 Previsão de Demanda', '1.5 Gestão de Sistemas de Produção e Operações',
+    '1.6 Planejamento e Controle da Produção', '1.7 Gestão da Manutenção',
+    '1.8 Organização industrial, layout/arranjo físico', '1.9 Processos Produtivos Discretos e Contínuos',
+    '1.10 Engenharia de Métodos'
+  ],
+  B3: [
+    '1.1 Probabilidade e Estatística', '1.2 Gestão de Sistemas da Qualidade',
+    '1.3 Planejamento e Controle da Qualidade', '1.4 Confiabilidade de Processos e Produtos',
+    '1.5 Gestão do Desenvolvimento de Produto', '1.6 Projeto e Organização do Trabalho',
+    '1.7 Gestão do Conhecimento', '1.8 Gestão Ambiental', '1.9 Desenvolvimento Sustentável',
+    '1.10 Gestão da Inovação', '1.11 Gestão da Tecnologia', '1.12 Engenharia de Processos'
+  ]
+};
+
 let cfg = {url:'',key:'',prova:'',meta:META_DEFAULT};
 let sessions = [];
 let charts = {};
@@ -299,6 +339,9 @@ let useSupabase = false;
   document.getElementById('cfg-key').value  = cfg.key  || '';
   document.getElementById('cfg-meta').value = cfg.meta || 5000;
   document.getElementById('cfg-prova').value = cfg.prova || '';
+
+  // Atualiza a lista de tópicos quando a matéria muda
+  document.getElementById('f-materia').addEventListener('change', updateTopicos);
 
   document.getElementById('f-tipo').addEventListener('change', (e) => {
     const isTheory = ['leitura', 'revisao', 'video'].includes(e.target.value);
@@ -323,6 +366,24 @@ let useSupabase = false;
   }
   renderDashboard();
 })();
+
+// Função para injetar os tópicos corretos na Datalist
+function updateTopicos() {
+  const mat = document.getElementById('f-materia').value;
+  const dl = document.getElementById('lista-topicos');
+  const topicoInput = document.getElementById('f-topico');
+  
+  dl.innerHTML = '';
+  topicoInput.value = ''; // Limpa o campo ao mudar de matéria
+  
+  if (EDITAL[mat]) {
+    EDITAL[mat].forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      dl.appendChild(opt);
+    });
+  }
+}
 
 function goTo(id, btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
@@ -393,6 +454,7 @@ async function saveSession(){
   const ok  = document.getElementById('form-ok');
   err.textContent=''; ok.textContent='';
 
+  if(!mat)             return err.textContent='Selecione a matéria/bloco.';
   if(!top)             return err.textContent='Informe o tópico.';
   if(tempo<1)          return err.textContent='Informe o tempo (min).';
 
