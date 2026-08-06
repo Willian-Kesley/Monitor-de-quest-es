@@ -3,13 +3,13 @@
 <head> 
   <meta charset="UTF-8"> 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"> 
-  <meta name="description" content="Monitor de estudos para concurso Petrobras Ênfase 18 - Engenharia de Produção. Tema Surf Animado."> 
+  <meta name="description" content="Monitor de estudos para concurso Petrobras Ênfase 18 - Engenharia de Produção. Tema Surf de Florianópolis."> 
   <meta name="theme-color" content="#0ea5e9"> 
   <meta name="mobile-web-app-capable" content="yes"> 
   <meta name="apple-mobile-web-app-capable" content="yes"> 
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> 
-  <meta name="apple-mobile-web-app-title" content="Surf E18"> 
-  <title>Monitor Petrobras | Ocean Drop Pro</title> 
+  <meta name="apple-mobile-web-app-title" content="Floripa E18"> 
+  <title>Monitor Petrobras | Floripa Surf Prep</title> 
   <link rel="manifest" href="manifest.json"> 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script> 
   <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}</script> 
@@ -43,6 +43,12 @@
       --pb-green:#0284c7;   
       --pb-yellow:#fbbf24;   
       --pb-white:#FFFFFF; 
+
+      /* Pôr do sol Floripa - Joaquina/Lagoa */
+      --sunset1:#fb923c;   
+      --sunset2:#f472b6;   
+      --dune:#78350f;   
+      --dune-light:#b45309;   
     }
     
     body{
@@ -96,7 +102,7 @@
     .app{display:grid;grid-template-columns:250px 1fr;min-height:100vh; background: rgba(8, 17, 25, 0.2);} 
     @media(max-width:700px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr}} 
     
-    .quote-banner{background: linear-gradient(90deg, #0369a1, #0ea5e9, #0369a1); background-size: 200% auto; animation: gradientShift 8s linear infinite; border-bottom: 3px solid var(--pb-yellow); padding: 14px 24px; text-align: center; font-style: italic; font-weight: 600; color: #fff; font-size: 13px; letter-spacing: 0.3px;} 
+    .quote-banner{background: linear-gradient(90deg, #7c2d12, #fb923c, #0284c7, #0ea5e9, #7c2d12); background-size: 250% auto; animation: gradientShift 10s linear infinite; border-bottom: 3px solid var(--pb-yellow); padding: 14px 24px; text-align: center; font-style: italic; font-weight: 600; color: #fff; font-size: 13px; letter-spacing: 0.3px; text-shadow: 0 1px 4px rgba(0,0,0,.4);} 
     @keyframes gradientShift { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
 
     .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:0 0 16px;display:flex;flex-direction:column;gap:6px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);} 
@@ -237,16 +243,6 @@
     .loading-overlay.show{display:flex} 
     .spinner-lg{width:40px;height:40px;border:3px solid rgba(14, 165, 233,.2);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite} 
     
-    .timer-box {background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: var(--r2); padding: 20px; margin-bottom: 20px; text-align: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);} 
-    .timer-title {font-size: 11.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; font-weight: 800;} 
-    .timer-display {font-size: 38px; font-family: 'Courier New', Courier, monospace; font-weight: 900; color: var(--yellow); margin-bottom: 16px; text-shadow: 0 0 15px rgba(251, 191, 36, 0.3), 0 2px 5px rgba(0,0,0,0.5);} 
-    .timer-controls {display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;} 
-    .btn-timer {background: var(--card); border: 1px solid rgba(255,255,255,0.1); color: var(--text); padding: 8px 16px; border-radius: var(--r); font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2);} 
-    .btn-timer#btn-timer-start { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 4px 10px rgba(14,165,233,0.3);}
-    .btn-timer#btn-timer-start:hover { background: var(--primary-d); transform: translateY(-1px);} 
-    .btn-timer-sec:hover { background: rgba(255,255,255,0.05); transform: translateY(-1px);} 
-    .btn-timer-fill { background: var(--yellow) !important; border-color: var(--yellow) !important; color: #000 !important; box-shadow: 0 4px 10px rgba(251,191,36,0.3) !important;} 
-    .btn-timer-fill:hover { filter: brightness(1.1); transform: translateY(-1px);} 
     
     .list-item[onclick] {transition: all .2s ease; cursor: pointer;} 
     .list-item[onclick]:hover {background: rgba(14, 165, 233, 0.1) !important; border-color: var(--primary) !important; transform: translateX(4px);} 
@@ -254,13 +250,49 @@
 </head> 
 <body> 
 
-<!-- Fundo Animado Ocean Drop SVG -->
+<!-- Fundo Animado Floripa Surf SVG -->
 <div class="ocean-bg">
   <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#fb923c" stop-opacity="0.55"/>
+        <stop offset="45%" stop-color="#fb923c" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="duneGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#92400e" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="#451a03" stop-opacity="0.85"/>
+      </linearGradient>
+    </defs>
+
+    <!-- Sol/Lua poente sobre o mar de Floripa -->
+    <circle class="target-pulse" cx="1180" cy="230" r="230" fill="url(#sunGlow)" style="animation-duration:6s" />
+    <circle cx="1180" cy="230" r="46" fill="none" stroke="#fbbf24" stroke-width="2" opacity="0.55" />
+
     <!-- Ondas de Fundo -->
     <path class="wave-line w1" fill="none" stroke="#0ea5e9" stroke-width="2" opacity="0.3" d="M-100,800 C300,800 450,400 900,450 S1300,150 1500,50" />
     <path class="wave-line w2" fill="none" stroke="#38bdf8" stroke-width="1.5" opacity="0.15" d="M-100,820 C300,820 450,420 900,470 S1300,170 1500,70" />
-    
+
+    <!-- Farolzinho da Barra da Lagoa -->
+    <g transform="translate(150, 560)" opacity="0.5">
+      <rect x="-6" y="-70" width="12" height="70" fill="#edf0f5" opacity="0.6"/>
+      <rect x="-8" y="-78" width="16" height="10" fill="#ef4444" opacity="0.7"/>
+      <polygon points="-10,0 10,0 14,14 -14,14" fill="#0c4a6e" opacity="0.7"/>
+    </g>
+
+    <!-- Duna da Joaquina no horizonte -->
+    <path fill="url(#duneGrad)" d="M-50,900 C150,760 380,850 620,780 C860,710 1000,820 1250,770 C1380,745 1470,790 1540,780 L1540,900 Z" />
+    <path fill="none" stroke="#b45309" stroke-width="1.5" opacity="0.35" d="M-50,900 C150,760 380,850 620,780 C860,710 1000,820 1250,770 C1380,745 1470,790 1540,780" />
+
+    <!-- Coqueiro estilizado -->
+    <g transform="translate(90, 830) scale(0.9)" opacity="0.55">
+      <path d="M0,0 C-6,-40 -2,-80 6,-115" fill="none" stroke="#78350f" stroke-width="6" stroke-linecap="round"/>
+      <path d="M6,-115 C-20,-125 -40,-118 -55,-98" fill="none" stroke="#10b981" stroke-width="6" stroke-linecap="round"/>
+      <path d="M6,-115 C24,-130 48,-128 65,-112" fill="none" stroke="#10b981" stroke-width="6" stroke-linecap="round"/>
+      <path d="M6,-115 C0,-138 8,-152 22,-160" fill="none" stroke="#10b981" stroke-width="6" stroke-linecap="round"/>
+      <path d="M6,-115 C-8,-135 -6,-152 -18,-162" fill="none" stroke="#10b981" stroke-width="6" stroke-linecap="round"/>
+    </g>
+
     <!-- Prancha de Surf Flutuante -->
     <g class="surfer-board">
       <path fill="#081119" stroke="#fbbf24" stroke-width="3" d="M-35,0 C-35,-12 35,-12 45,0 C35,12 -35,12 -35,0 Z" />
@@ -290,7 +322,10 @@
           <path d="M2 12c2 0 3-3 6-3s4 3 6 3 3-3 6-3"/>
         </svg>      
       </div>       
-      <span>Ocean Drop • E18</span>     
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">         
+        <span>Floripa Surf • E18</span>         
+        <span style="font-size:8.5px;color:var(--muted);letter-spacing:2px;font-weight:700;opacity:.8;text-transform:none;">Ilha da Magia</span>       
+      </div>     
     </div>     
     <div class="sidebar-nav">     
       <button class="nav-btn on" onclick="goTo('dashboard',this)">       
@@ -317,7 +352,7 @@
   </nav>   
   <div style="display:flex; flex-direction:column; height: 100vh; overflow: hidden;">     
     <div class="quote-banner">       
-      "O tempo as vezes é alheio a nossa vontade, só o que é bom dura tempo o bastante para se tornar inesquecível..."     
+      "A constância é como o mar: dias de calmaria, dias de tempestade. Mas a série perfeita, seja num simulado ou nas águas de Floripa, sempre vem para quem continua remando."     
     </div>     
     <main class="main" style="flex:1;">       
       
@@ -346,8 +381,9 @@
           </div>                      
           <div class="fg">             
             <label>Tópico estudado (Edital)</label>             
-            <input type="text" id="f-topico" list="lista-topicos" placeholder="Clique ou digite para buscar a manobra...">             
-            <datalist id="lista-topicos"></datalist>           
+            <input type="text" id="f-topico" list="lista-topicos" placeholder="Pesquise um tópico existente ou digite um novo...">             
+            <datalist id="lista-topicos"></datalist>             
+            <div style="font-size:11px;color:var(--hint);margin-top:6px;">Se o tópico não existir, ele é adicionado automaticamente ao edital dessa matéria.</div>           
           </div>           
           <div class="fg">             
             <label>Tipo de atividade</label>             
@@ -362,15 +398,6 @@
           <div class="form-row">             
             <div class="fg"><label>Ondas Surfadas (Questões)</label><input type="number" id="f-feitas" min="1" placeholder="0"></div>             
             <div class="fg"><label>Manobras Concluídas (Acertos)</label><input type="number" id="f-acertos" min="0" placeholder="0"></div>           
-          </div>           
-          <div class="timer-box">             
-            <div class="timer-title">Cronômetro da Bateria</div>             
-            <div class="timer-display" id="timer-display">00:00:00</div>             
-            <div class="timer-controls">               
-              <button type="button" class="btn-timer" id="btn-timer-start" onclick="toggleTimer()">Iniciar Drop</button>               
-              <button type="button" class="btn-timer btn-timer-sec" id="btn-timer-reset" onclick="resetTimer()">Zerar</button>               
-              <button type="button" class="btn-timer btn-timer-fill" id="btn-timer-apply" onclick="applyTimer()">Parar e Preencher</button>             
-            </div>           
           </div>           
           <div class="fg"><label>Tempo na água (min)</label><input type="number" id="f-tempo" min="1" placeholder="60"></div>           
           <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" id="btn-save" onclick="saveSession()">             
@@ -443,6 +470,7 @@ CREATE POLICY "allow_all" ON sessoes FOR ALL USING (true) WITH CHECK (true);</pr
 <script> 
 const CFG_KEY = 'pb_cfg_v1'; 
 const LOCAL_KEY = 'pb_sessions_v4'; 
+const CUSTOM_TOPICS_KEY = 'pb_custom_topicos_v1'; 
 const META_DEFAULT = 5000; 
 const ALERT_PCT = 70; 
 const DIAS_ESQUECIMENTO = 21; 
@@ -489,57 +517,6 @@ let sessions = [];
 let charts = {}; 
 let useSupabase = false; 
 
-let timerInterval = null; 
-let timerSeconds = 0; 
-let timerRunning = false; 
-
-window.toggleTimer = function() {   
-  const btnStart = document.getElementById('btn-timer-start');   
-  if (timerRunning) {     
-    clearInterval(timerInterval);     
-    timerRunning = false;     
-    btnStart.textContent = 'Retomar Drop';     
-    btnStart.style.background = 'var(--primary)';   
-  } else {     
-    timerRunning = true;     
-    btnStart.textContent = 'Pausar';     
-    btnStart.style.background = 'var(--red)';     
-    timerInterval = setInterval(() => {       
-      timerSeconds++;       
-      updateTimerDisplay();     
-    }, 1000);   
-  }
-};
-
-function updateTimerDisplay() {   
-  const hrs = String(Math.floor(timerSeconds / 3600)).padStart(2, '0');   
-  const mins = String(Math.floor((timerSeconds % 3600) / 60)).padStart(2, '0');   
-  const secs = String(timerSeconds % 60).padStart(2, '0');   
-  const display = document.getElementById('timer-display');   
-  if (display) display.textContent = `${hrs}:${mins}:${secs}`; 
-}
-
-window.resetTimer = function() {   
-  clearInterval(timerInterval);   
-  timerSeconds = 0;   
-  timerRunning = false;   
-  const btnStart = document.getElementById('btn-timer-start');   
-  if (btnStart) {     
-    btnStart.textContent = 'Iniciar Drop';     
-    btnStart.style.background = 'var(--primary)';   
-  }
-  updateTimerDisplay(); 
-};
-
-window.applyTimer = function() {   
-  if (timerRunning) {     
-    toggleTimer();   
-  }
-  const mins = Math.max(1, Math.round(timerSeconds / 60));   
-  const tempoInput = document.getElementById('f-tempo');   
-  if (tempoInput) tempoInput.value = mins;   
-  showToast(`Tempo na água: ${mins} min`); 
-};
 
 window.quickFillStudy = function(mat, top) {   
   const regBtn = document.querySelectorAll('.nav-btn')[1];   
@@ -648,6 +625,7 @@ function getStudyRecommendations() {
 
 (async function init(){   
   try { cfg = {...cfg,...JSON.parse(localStorage.getItem(CFG_KEY)||'{}')} } catch(e){}   
+  loadCustomTopicos();   
   document.getElementById('f-data').valueAsDate = new Date();   
   document.getElementById('cfg-url').value  = cfg.url  || '';   
   document.getElementById('cfg-key').value  = cfg.key  || '';   
@@ -692,6 +670,36 @@ function updateTopicos() {
       dl.appendChild(opt);     
     });   
   }
+}
+
+function loadCustomTopicos() {   
+  let custom = {};   
+  try { custom = JSON.parse(localStorage.getItem(CUSTOM_TOPICS_KEY)||'{}'); } catch(e){}   
+  Object.keys(custom).forEach(mat=>{     
+    if (!EDITAL[mat]) return;     
+    (custom[mat]||[]).forEach(t=>{       
+      if (!EDITAL[mat].some(x=>x.toLowerCase()===t.toLowerCase())) EDITAL[mat].push(t);     
+    });   
+  }); 
+}
+
+function saveCustomTopico(mat, topico) {   
+  let custom = {};   
+  try { custom = JSON.parse(localStorage.getItem(CUSTOM_TOPICS_KEY)||'{}'); } catch(e){}   
+  if (!custom[mat]) custom[mat] = [];   
+  if (!custom[mat].some(x=>x.toLowerCase()===topico.toLowerCase())) custom[mat].push(topico);   
+  localStorage.setItem(CUSTOM_TOPICS_KEY, JSON.stringify(custom)); 
+}
+
+function ensureTopicoNoEdital(mat, topico) {   
+  if (!EDITAL[mat]) return false;   
+  const existe = EDITAL[mat].some(t=>t.toLowerCase()===topico.toLowerCase());   
+  if (!existe) {     
+    EDITAL[mat].push(topico);     
+    saveCustomTopico(mat, topico);     
+    return true;   
+  }   
+  return false; 
 }
 
 function goTo(id, btn){   
@@ -775,6 +783,13 @@ async function saveSession(){
     if(acertos<0||acertos>feitas) return err.textContent='Acertos inválidos.';   
   }
   setBtnLoading(true);   
+  const isNovoTopico = ensureTopicoNoEdital(mat, top);   
+  if (isNovoTopico) {     
+    const dl = document.getElementById('lista-topicos');     
+    if (dl && document.getElementById('f-materia').value === mat) {       
+      const opt = document.createElement('option'); opt.value = top; dl.appendChild(opt);     
+    }   
+  }
   const sess = {id:Date.now(),data:d,materia:mat,topico:top,feitas,acertos,tempo,tipo,revisado:false};   
   try {     
     if(useSupabase){       
@@ -791,8 +806,8 @@ async function saveSession(){
     }     
     document.getElementById('f-tempo').value='';     
     document.getElementById('f-data').valueAsDate = new Date();     
-    ok.textContent = 'Sessão salva com sucesso!';     
-    showToast('Sessão registrada!');     
+    ok.textContent = isNovoTopico ? 'Sessão salva e novo tópico adicionado ao edital!' : 'Sessão salva com sucesso!';     
+    showToast(isNovoTopico ? 'Tópico novo adicionado ao edital!' : 'Sessão registrada!');     
     setTimeout(()=>goTo('dashboard',document.querySelector('.nav-btn')),1200);   
   } catch(e){     
     err.textContent = 'Erro ao salvar: '+e.message;   
