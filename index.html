@@ -317,7 +317,7 @@
   </nav>   
   <div style="display:flex; flex-direction:column; height: 100vh; overflow: hidden;">     
     <div class="quote-banner">       
-      "A constância é como o mar: dias de calmaria, dias de tempestade. Mas a série perfeita, seja num simulado ou nas águas de Floripa, sempre vem para quem continua remando."     
+      "O tempo as vezes é alheio a nossa vontade, só o que é bom dura tempo o bastante para se tornar inesquecível..."     
     </div>     
     <main class="main" style="flex:1;">       
       
@@ -827,12 +827,14 @@ function renderDashboard(){
   let tF=0, tA=0, tT=0, tTeorico=0, tPratico=0;   
   let sF=0, sA=0;   
   const dias=new Set();   
+  const diasComQuestoes=new Set();   
   let revPendentes = 0;   
   let revConcluidas = 0;   
   const topicsMap = {};   
   
   sessions.forEach(s=>{     
     tT+=s.tempo; dias.add(s.data);     
+    if(s.feitas > 0) diasComQuestoes.add(s.data);     
     if(['leitura', 'revisao', 'video'].includes(s.tipo)){       
       tTeorico += s.tempo;     
     } else {       
@@ -856,6 +858,8 @@ function renderDashboard(){
     }   
   });   
   
+  const diasQuestoes = diasComQuestoes.size;   
+  const diasTeoria = dias.size - diasComQuestoes.size;   
   const totalFeitas = tF + sF;   
   const totalAcertos = tA + sA;   
   const totalErros = totalFeitas - totalAcertos;   
@@ -920,6 +924,22 @@ function renderDashboard(){
       <div class="mc-val">${fmtTime(tT)}</div>       
       <div class="mc-sub">Prática: ${fmtTime(tPratico)} | Teoria: ${fmtTime(tTeorico)}</div>       
       <div class="mc-accent" style="color:${streak>=5?'#34d399':'var(--muted)'}"> ${streak}d caindo na água</div>     
+    </div>     
+    <div class="mc glass-panel">       
+      <div class="mc-lbl">Dias de Questões</div>       
+      <div class="mc-val" style="color:var(--primary)">${diasQuestoes}</div>       
+      <div class="mc-sub">Dias em que resolveu questões</div>     
+    </div>     
+    <div class="mc glass-panel">       
+      <div class="mc-lbl">Dias de Teoria</div>       
+      <div class="mc-val" style="color:var(--yellow)">${diasTeoria}</div>       
+      <div class="mc-sub">Só videoaula, leitura ou revisão</div>       
+      <div class="mc-accent" style="color:#34d399">Também conta como estudo 🎥</div>     
+    </div>     
+    <div class="mc glass-panel">       
+      <div class="mc-lbl">Total de Dias Estudados</div>       
+      <div class="mc-val" style="color:#34d399">${dias.size}</div>       
+      <div class="mc-sub">${diasQuestoes} c/ questões + ${diasTeoria} só teoria</div>     
     </div>   
   </div>`;   
   
@@ -1075,14 +1095,19 @@ function renderDashboard(){
       <div class="heatmap-wrap glass-panel" style="margin-bottom:0">         
         <div class="chart-title">Heatmap de Constância</div>         
         <div id="heatmap-inner"></div>         
-        <div class="hm-legend">           
-          <span>Flat</span>           
+        <div class="hm-legend" style="flex-wrap:wrap;row-gap:8px;">           
+          <span>Sem estudo</span>           
           <div class="hm-sq" style="background:rgba(255,255,255,0.05)"></div>           
+          <span style="margin-left:6px;color:var(--primary);font-weight:700;">Questões</span>           
           <div class="hm-sq" style="background:#0c4a6e"></div>           
           <div class="hm-sq" style="background:#075985"></div>           
           <div class="hm-sq" style="background:#0284c7"></div>           
           <div class="hm-sq" style="background:#0ea5e9; box-shadow: 0 0 8px #0ea5e9;"></div>           
-          <span>Clássico</span>         
+          <span style="margin-left:6px;color:var(--yellow);font-weight:700;">Teoria</span>           
+          <div class="hm-sq" style="background:#78350f"></div>           
+          <div class="hm-sq" style="background:#92400e"></div>           
+          <div class="hm-sq" style="background:#b45309"></div>           
+          <div class="hm-sq" style="background:#fbbf24; box-shadow: 0 0 8px #fbbf24;"></div>         
         </div>       
       </div>       
       <div class="chart-card glass-panel" style="margin-bottom:0">         
@@ -1103,6 +1128,14 @@ function renderDashboard(){
           `).join('')}         
         </div>       
       </div>     
+    </div>     
+    <div class="chart-card glass-panel">       
+      <div class="chart-title" style="color: var(--yellow)">         
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>           
+        Consolidado Semanal: Teoria x Questões       
+      </div>       
+      <div class="chart-wrap" style="height:240px"><canvas id="consolidadoChart"></canvas></div>       
+      <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:center;">Videoaula, leitura e revisão também são estudo — aqui as duas frentes aparecem juntas, semana a semana.</div>     
     </div>`;   
   }
 
@@ -1139,7 +1172,8 @@ function renderDashboard(){
       renderEvolutionChart(META);       
       renderPie(totalAcertos, totalErros);       
       renderRadar(topicsMap);       
-      renderHeatmap();     
+      renderHeatmap();       
+      renderConsolidado();     
     }, 60);
   }
 }
@@ -1306,6 +1340,52 @@ function renderRadar(topicsMap){
   }); 
 }
 
+function renderConsolidado(){   
+  const ctx = document.getElementById('consolidadoChart');   
+  if(!ctx || !sessions.length) return;   
+  function mondayOf(dataIso){     
+    const d = new Date(dataIso+'T12:00:00');     
+    const dow = d.getDay();     
+    const diff = (dow===0?-6:1-dow);     
+    d.setDate(d.getDate()+diff);     
+    return d.toISOString().split('T')[0];   
+  }
+  const weekMap = {};   
+  sessions.forEach(s=>{     
+    const wk = mondayOf(s.data);     
+    if(!weekMap[wk]) weekMap[wk] = {teoria:0, questoes:0};     
+    if(['leitura','revisao','video'].includes(s.tipo)) weekMap[wk].teoria += s.tempo;     
+    else weekMap[wk].questoes += s.tempo;   
+  });   
+  const weeks = Object.keys(weekMap).sort();   
+  const labels = weeks.map(w=>fmtDateShort(w));   
+  const dataTeoria = weeks.map(w=>+(weekMap[w].teoria/60).toFixed(1));   
+  const dataQuestoes = weeks.map(w=>+(weekMap[w].questoes/60).toFixed(1));   
+  Chart.defaults.color = '#829ab1';   
+  Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";   
+  charts.consolidado = new Chart(ctx.getContext('2d'), {     
+    type: 'bar',     
+    data: {       
+      labels,       
+      datasets: [         
+        {label:'Horas de Teoria (videoaula/leitura/revisão)', data:dataTeoria, backgroundColor:'#fbbf24cc', borderRadius:4},         
+        {label:'Horas de Questões (prática/simulado)', data:dataQuestoes, backgroundColor:'#0ea5e9cc', borderRadius:4}       
+      ]     
+    },     
+    options: {       
+      responsive: true, maintainAspectRatio: false,       
+      scales: {         
+        x: {stacked:true, grid:{display:false}, ticks:{font:{size:10}, maxRotation:0}},         
+        y: {stacked:true, beginAtZero:true, grid:{color:'rgba(255,255,255,.05)'}, ticks:{font:{size:10}}}       
+      },       
+      plugins: {         
+        legend: {position:'bottom', labels:{boxWidth:12, font:{size:11, weight:'bold'}}},         
+        tooltip: {callbacks:{label:function(c){return `${c.dataset.label}: ${c.parsed.y}h`;}}}       
+      }     
+    }   
+  }); 
+}
+
 function renderHeatmap(){   
   const today = new Date(); today.setHours(12,0,0,0);   
   const WEEKS = 26;   
@@ -1313,9 +1393,11 @@ function renderHeatmap(){
   startDay.setDate(startDay.getDate()-(WEEKS*7-1));   
   const dayMap={};   
   sessions.forEach(s=>{     
-    dayMap[s.data]=(dayMap[s.data]||0)+s.feitas;   
+    if(!dayMap[s.data]) dayMap[s.data]={tempo:0,questoes:false};     
+    dayMap[s.data].tempo += s.tempo;     
+    if(s.feitas>0) dayMap[s.data].questoes=true;   
   });   
-  const vals = Object.values(dayMap);   
+  const vals = Object.values(dayMap).map(v=>v.tempo);   
   const maxVal = vals.length ? Math.max(...vals) : 1;   
   
   function intensity(n){     
@@ -1327,12 +1409,13 @@ function renderHeatmap(){
     return 4;   
   }
 
-  const CELL_COLORS = ['rgba(255,255,255,0.05)','#0c4a6e','#075985','#0284c7','#0ea5e9'];   
+  const CELL_COLORS_Q = ['rgba(255,255,255,0.05)','#0c4a6e','#075985','#0284c7','#0ea5e9'];   
+  const CELL_COLORS_T = ['rgba(255,255,255,0.05)','#78350f','#92400e','#b45309','#fbbf24'];   
   const cells=[]; let d=new Date(startDay);   
   
   for(let i=0;i<WEEKS*7;i++){     
     const iso=d.toISOString().split('T')[0];     
-    cells.push({iso,n:dayMap[iso]||0,future:d>today});     
+    cells.push({iso,info:dayMap[iso]||null,future:d>today});     
     d=new Date(d); d.setDate(d.getDate()+1);   
   }
 
@@ -1350,10 +1433,12 @@ function renderHeatmap(){
 
   let grid='<div class="heatmap-grid">';   
   cells.forEach(c=>{     
-    const inten=c.future?0:intensity(c.n);     
-    const bg=CELL_COLORS[inten];     
-    const tip=c.future?'Futuro':`${c.iso}: ${c.n} questões`;     
-    const shadow = inten === 4 ? 'box-shadow: 0 0 6px #0ea5e9;' : '';
+    const n=c.info?c.info.tempo:0;     
+    const inten=c.future?0:intensity(n);     
+    const isQ=c.info&&c.info.questoes;     
+    const bg=inten===0?CELL_COLORS_Q[0]:(isQ?CELL_COLORS_Q[inten]:CELL_COLORS_T[inten]);     
+    const tip=c.future?'Futuro':(n?`${c.iso}: ${fmtTime(n)} • ${isQ?'com questões':'só teoria/vídeo'}`:`${c.iso}: sem estudo`);     
+    const shadow = inten===4?(isQ?'box-shadow: 0 0 6px #0ea5e9;':'box-shadow: 0 0 6px #fbbf24;'):'';
     grid+=`<div class="hm-cell" style="background:${bg};opacity:${c.future?0.3:1}; ${shadow}" title="${tip}"></div>`;   
   });   
   grid+='</div>';   
