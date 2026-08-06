@@ -145,6 +145,11 @@
     .badge-neutral{background:var(--surface);color:var(--muted); border: 1px solid var(--border);} 
     
     .cfg-banner{background:var(--yellow-bg);border:1px solid rgba(251, 191, 36,.3);border-radius:var(--r2);padding:16px 20px;margin-bottom:24px;font-size:13px;color:var(--yellow);backdrop-filter:blur(8px);} 
+    
+    .coach-card{display:flex;gap:14px;align-items:flex-start;padding:16px 20px;margin-bottom:20px;} 
+    .coach-avatar{flex-shrink:0;width:38px;height:38px;border-radius:50%;border:1px solid;display:flex;align-items:center;justify-content:center;font-size:18px;} 
+    .coach-title{font-size:13px;font-weight:800;margin-bottom:4px;} 
+    .coach-msg{font-size:12.5px;color:var(--text);line-height:1.5;} 
     .cfg-banner strong{display:block;margin-bottom:6px;font-size:14px} 
     .cfg-banner a{color:var(--yellow);text-underline-offset:4px; font-weight: 600;} 
     
@@ -352,7 +357,7 @@
   </nav>   
   <div style="display:flex; flex-direction:column; height: 100vh; overflow: hidden;">     
     <div class="quote-banner">       
-      "O tempo as vezes é alheio a nossa vontade, só o que é bom dura tempo bastante para se tornar inesquecível"..."     
+      "A constância é como o mar: dias de calmaria, dias de tempestade. Mas a série perfeita, seja num simulado ou nas águas de Floripa, sempre vem para quem continua remando."     
     </div>     
     <main class="main" style="flex:1;">       
       
@@ -903,7 +908,18 @@ function renderDashboard(){
   }).map(([name, data]) => ({name, ...data, days: Math.round((hojeData - new Date(data.lastDate+'T12:00:00'))/86400000)}))   
   .sort((a,b) => b.days - a.days).slice(0, 5);   
   
+  const coach = gerarFeedbackCoach({sessions, dias, hojeData, streak, coldTopics, paretoTopics, pctTreino, cfg, dias_restantes, totalFeitas, idealHoje, takt, diasTeoria, diasQuestoes, coverage});   
+  
   let html = '';   
+  const coachColors = {alerta:'#ef4444',atencao:'#fbbf24',lembrete:'#38bdf8',positivo:'#34d399',conquista:'#fbbf24',info:'#0ea5e9'};   
+  const coachCor = coachColors[coach.tom] || 'var(--primary)';   
+  html += `<div class="coach-card glass-panel" style="border-left:4px solid ${coachCor};">     
+    <div class="coach-avatar" style="background:${coachCor}22;border-color:${coachCor}55;">🏄</div>     
+    <div style="flex:1;min-width:0;">       
+      <div class="coach-title" style="color:${coachCor};">${coach.titulo}</div>       
+      <div class="coach-msg">${coach.msg}</div>     
+    </div>   
+  </div>`;   
   if(!useSupabase){     
     html += `<div class="cfg-banner glass-panel">       
       <strong>Modo de Demonstração</strong>       
@@ -1651,6 +1667,70 @@ function setBtnLoading(on){
 }
 
 function destroyCharts(){Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});charts={}} 
+
+function diaDoAno(d){ const start=new Date(d.getFullYear(),0,0); return Math.floor((d-start)/86400000); } 
+
+function gerarFeedbackCoach(ctx){   
+  const {sessions, dias, hojeData, streak, coldTopics, paretoTopics, pctTreino, cfg, dias_restantes, totalFeitas, idealHoje, takt, diasTeoria, diasQuestoes, coverage} = ctx;   
+  const seed = diaDoAno(new Date());   
+  const escolher = arr => arr[seed % arr.length];   
+  
+  const nowLocal = new Date();   
+  const todayIso = new Date(nowLocal.getTime() - nowLocal.getTimezoneOffset()*60000).toISOString().split('T')[0];   
+  const diasOrdenados = [...dias].sort();   
+  const ultimaData = diasOrdenados.length ? diasOrdenados[diasOrdenados.length-1] : null;   
+  const diasSemEstudar = ultimaData ? Math.round((hojeData - new Date(ultimaData+'T12:00:00'))/86400000) : null;   
+  const estudouHoje = dias.has(todayIso);   
+  
+  if(sessions.length===0){     
+    return {tom:'info', titulo:'Bem-vindo(a) à água! 🏄', msg:'Registre sua primeira sessão de estudo — vídeo-aula, leitura ou questões, tudo conta pro seu edital. Bora começar a remar rumo à Petrobras!'};   
+  }
+  if(diasSemEstudar!==null && diasSemEstudar>=3 && !estudouHoje){     
+    return {tom:'alerta', titulo:'A maré esfriou 🌊', msg: escolher([       
+      `Já fazem ${diasSemEstudar} dias sem registro de estudo. Nem que seja 20 minutos de vídeo-aula hoje — o importante é voltar pra água.`,       
+      `${diasSemEstudar} dias parado(a). Você não precisa surfar ondas grandes hoje, só molhar o pé de novo — qualquer sessão já reativa o ritmo.`,       
+      `Faz ${diasSemEstudar} dias sem um registro. Sem cobrança pesada: escolhe um tópico curto e volta pro lineup hoje.`     
+    ])};   
+  }
+  if(!estudouHoje && diasSemEstudar!==null && diasSemEstudar>=1){     
+    return {tom:'lembrete', titulo:'Ainda não bateu ponto hoje ⏱️', msg: escolher([       
+      'Ainda não tem sessão registrada hoje. Um vídeo-aula ou uma leitura já garante seu dia na água.',       
+      'Hoje ainda tá em branco no diário de bordo. Bora registrar alguma coisa, nem que seja teoria?',       
+      'Faltou o check-in de hoje. Qualquer estudo conta — vídeo, leitura ou questões.'     
+    ])};   
+  }
+  if(estudouHoje && streak>0 && streak%7===0){     
+    return {tom:'conquista', titulo:`${streak} dias seguidos! 🏆`, msg:'Uma semana inteira (ou mais) sem furar! Isso é constância de quem vai passar. Continua remando.'};   
+  }
+  if(coldTopics.length>0){     
+    const t = coldTopics[0];     
+    return {tom:'atencao', titulo:'Onda esquecida 🧊', msg: escolher([       
+      `"${t.name}" tá há ${t.days} dias sem revisão. Bom momento pra revisar antes de esquecer de vez.`,       
+      `Faz ${t.days} dias que você não toca em "${t.name}". Encaixa uma revisão rápida essa semana.`     
+    ])};   
+  }
+  if(paretoTopics.length>0 && pctTreino<70){     
+    const [nome, d] = paretoTopics[0];     
+    return {tom:'atencao', titulo:'Ponto de reforço 🎯', msg:`"${nome}" concentra seus maiores erros (${d.erros} questões erradas). Vale um treino focado nesse tópico.`};   
+  }
+  if(cfg.prova && dias_restantes>0){     
+    if(totalFeitas < idealHoje){       
+      return {tom:'alerta', titulo:'Ritmo abaixo do ideal 📉', msg:`Faltam ${dias_restantes} dias pra prova e você precisa de ~${takt} questões/dia pra bater a meta. Hoje ainda dá pra ajustar o ritmo.`};     
+    } else {       
+      return {tom:'positivo', titulo:'No prazo! 🤙', msg: escolher([         
+        'Você está à frente do ritmo ideal pra prova. Mantém a constância e chega tranquilo na reta final.',         
+        `Ritmo em dia! ${dias_restantes} dias pela frente e sua evolução tá dentro (ou acima) do esperado.`       
+      ])};     
+    }   
+  }
+  if(diasTeoria > diasQuestoes*1.5 && diasQuestoes>0){     
+    return {tom:'atencao', titulo:'Hora de treinar questões 📝', msg:`Você tem ${diasTeoria} dias de teoria contra ${diasQuestoes} de questões. Teoria conta, mas intercalar com mais questões ajuda a fixar e a treinar o tempo de prova.`};   
+  }
+  return {tom:'positivo', titulo:'Bom trabalho! 👏', msg: escolher([     
+    `Streak de ${streak} dias e cobertura de ${coverage.pct}% do edital. Continua nessa pegada.`,     
+    'Tudo em ordem por aqui. Bora manter o ritmo e seguir cobrindo o edital.'   
+  ])}; 
+}
 
 function calcStreak(){   
   const dias=[...new Set(sessions.map(s=>s.data))].sort().reverse();   
